@@ -138,8 +138,8 @@ void moveLine(int distance, int rate){
 //  -1,1 | -1,-1
 void moveArc(int radius, double theta, int x, int y, int rate){
 	//Calculate circle circuference per degree
-	double outerpd = (radius * 2.0 * 3.14159) / 360.0;
-	double innerpd = ((radius - 102) * 2.0 * 3.14159) / 360.0;
+	double outerpd = ((radius + 51) * 2.0 * 3.14159) / 360.0;
+	double innerpd = ((radius - 51) * 2.0 * 3.14159) / 360.0;
 	//calculate inner rate in mm/s
 	double innerRate = innerpd / outerpd * rate;
 
