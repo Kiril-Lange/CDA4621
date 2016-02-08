@@ -111,4 +111,9 @@ void CCWSquare20in(){
 
 void Figure8_20_10_20(){
 	countDown(5, "Figure8 20-10-20");
+	moveArc(254, 120, 1, -1, 70);
+	moveLine(660, 70);
+	moveArc(254, 240, 1, 1, 70);
+	moveLine(660, 70);
+	moveArc(254, 120, 1, -1, 70);
 }

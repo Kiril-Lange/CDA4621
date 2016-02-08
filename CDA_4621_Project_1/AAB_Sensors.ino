@@ -79,8 +79,10 @@ void printIRDistance() {
 	lcd.print(printDist);
 }
 
-//Converts the IR value to a printable string
+//Converts the IR value to a printable string 10th of an inch
 void IRDistToString(String &StrDist, int distance){
+	double temp = distance * 0.393701;
+	distance = temp;
 	if (distance < 1000){
 		StrDist = "0";
 		if (distance < 100){
