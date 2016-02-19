@@ -61,9 +61,12 @@ int rightDistance = 0;
 int centerDistance = 0;
 int Choice = 0;
 
-//Global vars for encoders
+//Global movement vars
+int MAXmms = 150;
 double leftPercent;
 double rightPercent;
+
+//Global vars for encoders
 long int leftmillis;
 long int rightmillis;
 

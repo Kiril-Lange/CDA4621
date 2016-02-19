@@ -131,6 +131,33 @@ void moveLine(int distance, int rate){
 
 }
 
+//using the global percentages send signals to the servos.
+void movePercent()
+{
+	//convert the percents to mm/s
+	int Lrate = leftPercent * MAXmms;
+	int Rrate = rightPercent * MAXmms;
+
+	//convert rates to servo frequencies
+	int Lservofreq = 1500;
+	int RservoFreq = 1500;
+
+	//Left servo
+	if (Lrate > 0)
+		Lservofreq + ServoFwdLookup(Lrate);
+	else if (Lrate < 0)
+		Lservofreq - ServoRevLookup(abs(Lrate));
+
+	//Right servo
+	if (Rrate > 0)
+		RservoFreq - ServoFwdLookup(Rrate);
+	else if (Rrate < 0)
+		RservoFreq + ServoRevLookup(abs(Rrate));
+
+	LServo.writeMicroseconds(Lservofreq);
+	RServo.writeMicroseconds(RservoFreq);
+}
+
 //Moves the robot a certain number of degrees around a circle
 //       x
 //   1,1 |  1,-1
