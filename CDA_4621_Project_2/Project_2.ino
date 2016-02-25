@@ -50,20 +50,36 @@ void WallDistance()
 
 	//Select K
 	double K = selectK();
+  lcd.setBacklight(GREEN);
 	//select optimal distance 5 inches
 	int distance = 5 * 25.4;
+  // set start flag
+  bool start = true;
+  long int startTime = 0;
 	//Begin loop
+  countDown(3," ");
 	while (1)
 	{
 		//update sensors
 		updateIRSensors();
+    //printIRDistance();
 		//run control function on center
 		double percent = ControlFWD(distance, K);
-		pLeft, pRight = percent;
+		pLeft = percent;
+		pRight = percent;
 		//go straight
 		leftPercent = pLeft;
 		rightPercent = pRight;
-		movePercent();
+    //create a string to print to serial
+    if (start)
+    {
+      startTime = millis();
+      start = false;
+    }
+    //              time, distance, percent saturation
+    String output = String( String((millis() - startTime)) + "," + String(centerDistance) + "," + String(percent));
+    Serial.println(output);
+    movePercent();
 		//break loop when stopped
 		uint8_t buttons = lcd.readButtons();
 
@@ -72,6 +88,10 @@ void WallDistance()
 				return;
 		}
 		delay(100);
+    if ((millis() - startTime) > 30000)
+    {
+      break;
+    }
 	}
 }
 
@@ -81,7 +101,7 @@ void WallFollow()
 	double pLeft = 0;
 	double pRight = 0;
 	bool Lwall = true;
-	bool first;
+	bool first = true;
 
 	//Select K
 	double K = selectK();
@@ -93,20 +113,24 @@ void WallFollow()
 
 		//update sensors
 		updateIRSensors();
+    //printIRDistance();
 		//if distance is nonexistent or >3* on all sensors
 		if ((leftDistance == 0 || leftDistance > (3 * distance)) &&
 			(rightDistance == 0 || rightDistance > (3 * distance)) &&
 			(centerDistance == 0 || leftDistance > (3 * distance)))
 		{
 			//move forward optimal distance
-			moveLine(distance, MAXmms);
+			moveLine(distance * 1.2, MAXmms);
 			//update sensors
 			updateIRSensors;
 			//if sensor data exists continue to next loop
 			if (!((leftDistance == 0 || leftDistance > (3 * distance)) &&
 				(rightDistance == 0 || rightDistance > (3 * distance)) &&
 				(centerDistance == 0 || leftDistance > (3 * distance))))
+			{
+        first = true;
 				continue;
+			}
 			//turn 90 degrees in the direction on the last known wall.
 			if (Lwall)
 				movePivot(90, MAXmms);
@@ -116,7 +140,7 @@ void WallFollow()
 			if (first)
 			{
 				//move forward optimal distance
-				moveLine(distance, MAXmms);
+				moveLine(distance * 1.2, MAXmms);
 				first = false;
 			}
 			//else:
@@ -132,35 +156,47 @@ void WallFollow()
 					delay(100);
 					updateIRSensors();
 				}
+				//reset first
+				first = true;
 			}
 			//continue to next loop
 			continue;
 		}
 		//determine what side the wall is on
-		if (!rightDistance || leftDistance < rightDistance)
+		if (!rightDistance || leftDistance * 2 < rightDistance )
 		{
 			Lwall = true;
 		}
-		else
+		else if (!rightDistance || rightDistance * 2 < leftDistance )
 		{
 			Lwall = false;
 		}
 		//if front distance is less than or close to ( < 10%) optimal distance
-		if (centerDistance < distance || (double)(centerDistance - distance) / distance < (double)distance * .1)
+    double pDist = distance * 1.1;
+		if (centerDistance && centerDistance < pDist)
 		{
 			//pivot in oposite direction of closest wall
 			if (Lwall)
-				movePivot(-90, MAXmms);
+				movePivot(-90, (MAXmms / 2));
 			else
-				movePivot(90, MAXmms);
+				movePivot(90, (MAXmms / 2));
 			//continue to next loop
 			continue;
 		}
 		//run control function on center
-		pLeft = ControlFWD();
+		pLeft = ControlFWD(distance, K);
 		pRight = pLeft;
 		//run control function on Left and right
 		ControlLR(pLeft, pRight, distance, K);
+		//assign global movement to local movement
+		leftPercent = pLeft;
+		rightPercent = pRight;
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(leftPercent);
+    lcd.setCursor(0, 1);
+    lcd.print(rightPercent);
+    //delay(1500);
 		//go in a direction that optimises distance from the wall
 		movePercent();
 		//break loop when stopped
@@ -170,7 +206,8 @@ void WallFollow()
 			if (buttons & BUTTON_LEFT)
 				return;
 		}
-		delay(100);
+    first = true;
+		//delay(100);
 	}
 }
 
@@ -181,6 +218,7 @@ void CorridorNav()
 
 double selectK()
 {
+  delay(500);
 	bool refreshK = true;
 	byte KChoice = 0;
 	while (1)
@@ -191,7 +229,7 @@ double selectK()
 			lcd.setCursor(0, 0);
 			lcd.print("Select K:");
 			lcd.setCursor(0, 1);
-			lcd.print(Kp[KChoice]);
+			lcd.print((double)Kp[KChoice]/2.0);
 			lcd.setBacklight(YELLOW);
 			refreshK = false;
 		}
@@ -210,7 +248,7 @@ double selectK()
 					KChoice = 0;
 			}
 			if (buttons & BUTTON_SELECT) {
-				return ((double)Kp[KChoice] / 2);
+				return ((double)Kp[KChoice] / 2.0);
 			}
 		}
 		delay(100);
@@ -221,6 +259,8 @@ double ControlFWD(int distance, double K)
 {
 	//forward sensor value - optimal distance
 	int error = centerDistance - distance;
+  if (!centerDistance)
+    error = 4000;
 	//Saturation curve value
 	int strength = K * error;
 	//percent of maximum
@@ -246,14 +286,23 @@ double SatFunc(int strength)
 
 void ControlLR(double &pLeft, double &pRight, int distance, double K)
 {
+  //if in a corridor
+  bool isCRD = false;
+  
+  if ((leftDistance != 0 && leftDistance < (distance * 2)) &&
+  (rightDistance != 0 && rightDistance < (distance * 2)))
+  {
+    distance = (leftDistance + rightDistance) / 2;
+    isCRD = true;
+  }
 	//negative is too close, positive is too far
 	int Lerror = leftDistance - distance;
 	int Lstrength = K * Lerror;
 	int Rerror = rightDistance - distance;
 	int Rstrength = K * Rerror;
-
 	//Using the left sensor
-	if (leftDistance != 0 && leftDistance < distance * 3)
+	if ((leftDistance != 0 && leftDistance < (distance * 3)) || 
+	( isCRD && Lerror < 0 ))
 	{
 		double percent = SatFunc(Lstrength);
 		if (Lerror > 0)
@@ -263,37 +312,13 @@ void ControlLR(double &pLeft, double &pRight, int distance, double K)
 	}
 
 	//Using the right sensor
-	else if (rightDistance != 0 && rightDistance < distance * 3)
+	else if (rightDistance != 0 && rightDistance < (distance * 3) || 
+  ( isCRD && Rerror < 0 ))
 	{
 		double percent = SatFunc(Rstrength);
 		if (Rerror > 0)
 			pRight = pRight - percent;
 		else
 			pLeft = pLeft - abs(percent);
-	}
-}
-
-void ControlCRD(double &pLeft, double &pRight, int K)
-{
-	//distance is the middle of the corridor
-	int distance = (leftDistance + rightDistance) / 2;
-	//negative is too close, positive is too far
-	int Lerror = leftDistance - distance;
-	int Lstrength = K * Lerror;
-	int Rerror = rightDistance - distance;
-	int Rstrength = K * Rerror;
-
-	//Using the left sensor
-	if (Lerror > Rerror)
-	{
-		double percent = SatFunc(Lstrength);
-		pLeft = pLeft - percent;
-	}
-
-	//Using the right sensor
-	else
-	{
-		double percent = SatFunc(Rstrength);
-		pRight = pRight - percent;
 	}
 }

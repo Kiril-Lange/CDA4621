@@ -39,7 +39,7 @@ int getLongDistance(int voltage) {
 
 //Merges the short and long range distance sensor values
 int mergeDistance(int shortDist, int longDist) {
-	if (longDist >= 300)
+	if (longDist >= 300 && (!shortDist || shortDist > 300))
 		return longDist;
 	if (shortDist <= 200)
 		return shortDist;
@@ -61,11 +61,26 @@ int mergeDistance(int shortDist, int longDist) {
 
 //Gets fresh data from all istance sensors
 void updateIRSensors() {
-	leftDistance = getShortDistance(analogRead(SLSensor));
-	rightDistance = getShortDistance(analogRead(SRSensor));
-	int tempShort = getShortDistance(analogRead(SFSensor));
-	int tempLong = getLongDistance(analogRead(LFSensor));
-	centerDistance = mergeDistance(tempShort, tempLong);
+  int ltemp = 0;
+  int rtemp = 0;
+  int ctemp = 0;
+  //read sensors 5 times
+  for (int i = 0; i < 5; i++)
+  {
+    ltemp = ltemp + getShortDistance(analogRead(SLSensor));
+    rtemp = rtemp + getShortDistance(analogRead(SRSensor));
+    int tempShort = getShortDistance(analogRead(SFSensor));
+    int tempLong = getLongDistance(analogRead(LFSensor));
+    ctemp = ctemp + mergeDistance(tempShort, tempLong);
+  }
+  //average readings
+  ltemp = ltemp / 5;
+  rtemp = rtemp / 5;
+  ctemp = ctemp / 5;
+  //store averages
+	leftDistance = ltemp;
+	rightDistance = rtemp;
+	centerDistance = ctemp;
 }
 
 //Outputs the sensor data in a readable format

@@ -12,13 +12,17 @@
 
 //Servo forward function
 int ServoFwdLookup(double rate){
-	double temp = (rate + 14.107) / 2.2139;
-	return (int)temp;
+	double temp = 119.961 - 0.0393701 * sqrt( 7792470.0 - 50800.0 * rate);
+	if (rate < MINmms)
+		temp = 0;
+	return (int)round(temp);
 }
 //Servo reverse function
 int ServoRevLookup(double rate){
-	double temp = (rate - 1.4333) / 2.1186;
-	return (int)temp;
+	double temp = 113.853 - 0.00840627 * sqrt( 165596000.0 - 1064000.0 * rate);
+	if (rate < MINmms)
+		temp = 0;
+	return (int)round(temp);
 }
 
 //This funtion calculates a path from the current position to a destination
@@ -135,26 +139,26 @@ void moveLine(int distance, int rate){
 void movePercent()
 {
 	//convert the percents to mm/s
-	int Lrate = leftPercent * MAXmms;
-	int Rrate = rightPercent * MAXmms;
-
+	int Lrate = (double)((double)leftPercent * (double)MAXmms);
+	int Rrate = (double)((double)rightPercent * (double)MAXmms);
+  
 	//convert rates to servo frequencies
-	int Lservofreq = 1500;
+	int LservoFreq = 1500;
 	int RservoFreq = 1500;
 
 	//Left servo
 	if (Lrate > 0)
-		Lservofreq + ServoFwdLookup(Lrate);
+		LservoFreq = LservoFreq + ServoFwdLookup(Lrate);
 	else if (Lrate < 0)
-		Lservofreq - ServoRevLookup(abs(Lrate));
+		LservoFreq = LservoFreq - ServoRevLookup(abs(Lrate));
 
 	//Right servo
 	if (Rrate > 0)
-		RservoFreq - ServoFwdLookup(Rrate);
+		RservoFreq = RservoFreq - ServoFwdLookup(Rrate);
 	else if (Rrate < 0)
-		RservoFreq + ServoRevLookup(abs(Rrate));
-
-	LServo.writeMicroseconds(Lservofreq);
+		RservoFreq = RservoFreq + ServoRevLookup(abs(Rrate));
+  
+	LServo.writeMicroseconds(LservoFreq);
 	RServo.writeMicroseconds(RservoFreq);
 }
 

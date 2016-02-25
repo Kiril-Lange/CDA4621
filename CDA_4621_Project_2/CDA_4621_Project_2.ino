@@ -62,7 +62,8 @@ int centerDistance = 0;
 int Choice = 0;
 
 //Global movement vars
-int MAXmms = 150;
+int MAXmms = 140;
+int MINmms = 15;
 double leftPercent;
 double rightPercent;
 
