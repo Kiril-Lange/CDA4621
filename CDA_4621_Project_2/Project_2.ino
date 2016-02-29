@@ -167,7 +167,7 @@ void WallFollow()
 		{
 			Lwall = true;
 		}
-		else if (!rightDistance || rightDistance * 2 < leftDistance )
+		else if (!leftDistance || rightDistance * 2 < leftDistance )
 		{
 			Lwall = false;
 		}
